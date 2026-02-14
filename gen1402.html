@@ -4665,16 +4665,16 @@ const QUESTION_POOL = [
         hint: "ขออนุญาต และ ให้เครดิต [cite: 2006]"
     }
 ];
-        // ==========================================
-        // 2. SRS SYSTEM
+// ==========================================
+        // 2. SRS SYSTEM (แก้ไขแล้ว)
         // ==========================================
         const useSRS = () => {
             const load = () => JSON.parse(localStorage.getItem('gen1402_srs_v3') || '{}');
             const save = (data) => localStorage.setItem('gen1402_srs_v3', JSON.stringify(data));
             
             const update = (qId, isCorrect, timeSpent) => {
-                constdb = load();
-                let item =db[qId] || { ease: 2.5, interval: 0, reviews: 0, correct: 0, lapses: 0 };
+                const db = load();
+                let item = db[qId] || { ease: 2.5, interval: 0, reviews: 0, correct: 0, lapses: 0 };
                 const bonus = timeSpent < 5000 ? 0.15 : 0;
 
                 if (!isCorrect) { 
@@ -4686,25 +4686,25 @@ const QUESTION_POOL = [
                     else item.interval = Math.ceil(item.interval * (item.ease + bonus));
                     item.ease += 0.1;
                 }
-                item.dueDate =date.now() + (item.interval * 24 * 60 * 60 * 1000); 
+                item.dueDate = Date.now() + (item.interval * 24 * 60 * 60 * 1000); 
                 item.reviews++;
-               db[qId] = item;
+                db[qId] = item;
                 save(db);
             };
 
             const getStats = () => {
-                constdb = load();
+                const db = load();
                 const totalCards = QUESTION_POOL.length;
                 const learnedCards = Object.keys(db).length;
                 let mature = 0, young = 0, totalReviews = 0, totalCorrect = 0;
                 let forecast = [0, 0, 0, 0, 0];
-                const now =date.now();
+                const now = Date.now();
 
                 Object.values(db).forEach(item => {
                     if (item.interval > 21) mature++; else young++;
                     totalReviews += item.reviews; totalCorrect += item.correct;
-                    constdays = Math.ceil((item.dueDate - now) / 86400000);
-                    if (days >= 0 &&days < 5) forecast[days]++;
+                    const days = Math.ceil((item.dueDate - now) / 86400000);
+                    if (days >= 0 && days < 5) forecast[days]++;
                 });
 
                 return {
@@ -4715,18 +4715,18 @@ const QUESTION_POOL = [
             };
 
             const getDue = () => {
-                constdb = load();
-                return Object.keys(db).filter(id =>db[id].dueDate <=date.now()).map(Number);
+                const db = load();
+                return Object.keys(db).filter(id => db[id].dueDate <= Date.now()).map(Number);
             };
 
             return { update, getDue, getStats };
         };
 
         // ==========================================
-        // 3. COMPONENTS
+        // 3. COMPONENTS (แก้ไขแล้ว)
         // ==========================================
 
-        const StatsDashboard = ({ stats, onReview,dueCount, onClose }) => (
+        const StatsDashboard = ({ stats, onReview, dueCount, onClose }) => (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                 <div className="bg-white rounded-3xl p-6 w-full max-w-4xl shadow-2xl anim-fade max-h-[90vh] overflow-y-auto">
                     <div className="flex justify-between items-center mb-6">
@@ -4735,7 +4735,7 @@ const QUESTION_POOL = [
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        {/*donut Chart */}
+                        {/* Donut Chart */}
                         <div className="col-span-1 bg-gray-50 p-4 rounded-2xl flex flex-col items-center">
                             <div className="relative w-40 h-40 mb-4 rounded-full" style={{background: `conic-gradient(#4ade80 0% ${stats.mature/(stats.newCards+stats.young+stats.mature)*100}%, #60a5fa 0% ${(stats.mature+stats.young)/(stats.newCards+stats.young+stats.mature)*100}%, #e2e8f0 0% 100%)`}}>
                                 <div className="absolute inset-0 m-auto w-24 h-24 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
@@ -4771,7 +4771,7 @@ const QUESTION_POOL = [
                             </div>
                         </div>
                     </div>
-                    <button onClick={onReview}disabled={dueCount===0} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg ${dueCount>0?'bg-green-500 hover:bg-green-600':'bg-gray-300'}`}>
+                    <button onClick={onReview} disabled={dueCount===0} className={`w-full py-3 rounded-xl font-bold text-white shadow-lg ${dueCount>0?'bg-green-500 hover:bg-green-600':'bg-gray-300'}`}>
                         {dueCount > 0 ? `เริ่มทบทวน (${dueCount} ข้อ)` : 'ไม่มีข้อที่ต้องทบทวนวันนี้'}
                     </button>
                 </div>
@@ -4780,12 +4780,12 @@ const QUESTION_POOL = [
 
         const Menu = ({ onSelectMode }) => {
             const srs = useSRS();
-            constdueCount = srs.getDue().length;
+            const dueCount = srs.getDue().length;
             const [showStats, setShowStats] = useState(false);
 
             return (
                 <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-indigo-900 text-white">
-                    {showStats && <StatsDashboard stats={srs.getStats()}dueCount={dueCount} onReview={() => { setShowStats(false); onSelectMode('review_srs'); }} onClose={() => setShowStats(false)} />}
+                    {showStats && <StatsDashboard stats={srs.getStats()} dueCount={dueCount} onReview={() => { setShowStats(false); onSelectMode('review_srs'); }} onClose={() => setShowStats(false)} />}
                     
                     <div className="max-w-5xl w-full z-10 text-center">
                         <h1 className="text-5xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">GEN1402 PRO</h1>
@@ -4798,7 +4798,6 @@ const QUESTION_POOL = [
                                 <h3 className="text-xl font-bold mb-2">โหมดฝึกฝน</h3>
                                 <p className="text-sm text-indigo-200 mb-4">ทำข้อสอบพร้อมเฉลย (เรียงข้อ)</p>
                                 
-                                {/* ปุ่มฝึกฝนทั้งหมด ที่เคยหายไป ใส่คืนแล้วตรงนี้ */}
                                 <button onClick={() => onSelectMode('practice_all')} className="w-full mb-3 py-2 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl font-bold shadow-lg transition">
                                     ตะลุยโจทย์ทั้งหมด (330+ ข้อ)
                                 </button>
@@ -4865,16 +4864,16 @@ const QUESTION_POOL = [
                         return next;
                     });
                 };
-                const handleVis = () =>document.hidden && warn();
+                const handleVis = () => document.hidden && warn();
                 const handleBlur = () => warn();
-               document.addEventListener('visibilitychange', handleVis);
+                document.addEventListener('visibilitychange', handleVis);
                 window.addEventListener('blur', handleBlur);
-                return () => {document.removeEventListener('visibilitychange', handleVis); window.removeEventListener('blur', handleBlur); };
+                return () => { document.removeEventListener('visibilitychange', handleVis); window.removeEventListener('blur', handleBlur); };
             }, [isSerious]);
 
             const handleAnswer = (optIdx) => {
-                setAnswers(p => ({ ...p, [currentIdx]: { ans: optIdx, time:date.now()-lastActive.current } }));
-                lastActive.current =date.now();
+                setAnswers(p => ({ ...p, [currentIdx]: { ans: optIdx, time: Date.now()-lastActive.current } }));
+                lastActive.current = Date.now();
             };
 
             const finish = (force) => {
@@ -4907,7 +4906,7 @@ const QUESTION_POOL = [
                             <h2 className="text-xl font-bold text-gray-800 mb-6 font-sarabun">{q.q}</h2>
                             <div className="space-y-3 font-sarabun">
                                 {q.opts.map((opt, i) => (
-                                    <button key={i} onClick={() => !answers[currentIdx] && handleAnswer(i)}disabled={isPractice && answers[currentIdx]}
+                                    <button key={i} onClick={() => !answers[currentIdx] && handleAnswer(i)} disabled={isPractice && answers[currentIdx]}
                                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                                             isPractice && answers[currentIdx] ? 
                                                 (i===q.a ? 'bg-green-100 border-green-500 text-green-900' : (i===answers[currentIdx].ans ? 'bg-red-100 border-red-500' : 'opacity-50')) :
@@ -4926,7 +4925,7 @@ const QUESTION_POOL = [
                             )}
                         </div>
                         <div className="flex justify-between mt-6">
-                            <button onClick={()=>setCurrentIdx(c=>Math.max(0,c-1))}disabled={currentIdx===0} className="px-6 py-2 bg-white rounded shadowdisabled:opacity-50">← ก่อนหน้า</button>
+                            <button onClick={()=>setCurrentIdx(c=>Math.max(0,c-1))} disabled={currentIdx===0} className="px-6 py-2 bg-white rounded shadow disabled:opacity-50">← ก่อนหน้า</button>
                             {currentIdx===questions.length-1 ? 
                                 <button onClick={()=>finish(false)} className="px-6 py-2 bg-indigo-600 text-white rounded shadow">ส่งคำตอบ</button> :
                                 <button onClick={()=>setCurrentIdx(c=>Math.min(questions.length-1,c+1))} className="px-6 py-2 bg-white rounded shadow text-indigo-600">ถัดไป →</button>
@@ -4985,8 +4984,8 @@ const QUESTION_POOL = [
                     qSet = QUESTION_POOL.filter(q => q.ch === param);
                 } else if (m === 'review_srs') {
                     const srs = JSON.parse(localStorage.getItem('gen1402_srs_v3') || '{}');
-                    constdueIds = Object.keys(srs).filter(id => srs[id].dueDate <=date.now()).map(Number);
-                    qSet = QUESTION_POOL.filter(q =>dueIds.includes(q.id));
+                    const dueIds = Object.keys(srs).filter(id => srs[id].dueDate <= Date.now()).map(Number);
+                    qSet = QUESTION_POOL.filter(q => dueIds.includes(q.id));
                 } else if (m.includes('exam')) {
                     // แก้ไข: สุ่มตาม Blueprint แต่เรียงข้อสอบตามบท (Part 5 -> 6 -> 7...)
                     let parts = [];
@@ -5015,6 +5014,3 @@ const QUESTION_POOL = [
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
-    </script>
-</body>
-</html>
