@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEN1402 Exam Simulator (Ultimate)</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+        .no-select { user-select: none; -webkit-user-select: none; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .anim-fade { animation: fadeIn 0.4s ease-out; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // ==========================================
+        // 1. ฐานข้อมูลข้อสอบ (QUESTION BANK)
+        // ==========================================
+        // อ้างอิงจากไฟล์ "คลังข้อสอบการรู้ดิจิตอล gen1402 บท5-9.pdf"
+        // a: 0=ก, 1=ข, 2=ค, 3=ง
+        
+        const EXAM_BLUEPRINT = {
+            5: 20, // บทที่ 5: 20 ข้อ
+            6: 20, // บทที่ 6: 20 ข้อ
+            7: 20, // บทที่ 7: 20 ข้อ
+            8: 25, // บทที่ 8: 25 ข้อ
+            9: 25  // บทที่ 9: 25 ข้อ
+        };
+
+        const QUESTION_POOL = [
+            // --- บทที่ 5 (บางส่วนจากไฟล์) ---
+            { id: 501, ch: 5, q: "ตามหลัก DIKW ข้อใดคือความหมายของ 'สารสนเทศ' (Information)?", opts: ["ข้อเท็จจริงดิบ", "ข้อมูลที่ผ่านการประมวลผลแล้ว", "ความเข้าใจหลักการ", "นวัตกรรม"], a: 1, desc: "สารสนเทศคือข้อมูลที่ผ่านการประมวลผล วิเคราะห์ หรือจัดหมวดหมู่แล้ว", hint: "ไม่ใช่ข้อมูลดิบ แต่ 'ปรุง' แล้ว" },
+            { id: 502, ch: 5, q: "ทักษะ MIL (Media & Information Literacy) ประกอบด้วย?", opts: ["รู้เท่าทันสื่อ + สารสนเทศ + ICT", "เขียนโปรแกรม + ซ่อมคอม", "อ่าน + เขียน + คิดเลข", "การตลาด + โฆษณา"], a: 0, desc: "UNESCO รวมทักษะสื่อ สารสนเทศ และเทคโนโลยีเข้าด้วยกัน", hint: "3 ห่วง: สื่อ, ข้อมูล, ไอที" },
+            { id: 503, ch: 5, q: "ระดับสูงสุดของพีระมิด DIKW คือ?", opts: ["Data", "Information", "Knowledge", "Wisdom"], a: 3, desc: "Wisdom (ปัญญา) คือการนำความรู้ไปประยุกต์ใช้แก้ปัญหา", hint: "ยอดพีระมิด" },
+            { id: 504, ch: 5, q: "User-generated content คือ?", opts: ["เนื้อหาจาก AI", "เนื้อหาที่ผู้ใช้สร้างเอง", "เนื้อหาจากรัฐ", "เนื้อหาลิขสิทธิ์"], a: 1, desc: "เนื้อหาที่ผู้บริโภคสื่อเป็นผู้ผลิตเอง เช่น คลิป TikTok", hint: "User เป็นคนทำ" },
+            { id: 505, ch: 5, q: "ข้อใดเป็น 'ข้อคิดเห็น' (Opinion)?", opts: ["น้ำเดือด 100 องศา", "พระอาทิตย์ขึ้นทิศตะวันออก", "วิชานี้สนุกมาก", "ไทยอยู่ทวีปเอเชีย"], a: 2, desc: "ความรู้สึกชอบ/ไม่ชอบ เป็นข้อคิดเห็น พิสูจน์ไม่ได้", hint: "เรื่องของความรู้สึก" },
+            { id: 506, ch: 5, q: "โดเมนใดน่าเชื่อถือทางวิชาการที่สุด?", opts: [".com", ".net", ".ac.th / .edu", ".biz"], a: 2, desc: "โดเมนสถาบันการศึกษา (.ac.th, .edu)", hint: "โรงเรียน/มหาลัย" },
+            { id: 507, ch: 5, q: "แผนภูมิก้างปลา (Fishbone) ใช้ทำอะไร?", opts: ["ลำดับงาน", "โครงสร้างองค์กร", "หาสาเหตุและผลกระทบ", "เปรียบเทียบ"], a: 2, desc: "ใช้วิเคราะห์ Cause and Effect", hint: "หาสาเหตุปัญหา" },
+            { id: 508, ch: 5, q: "Infographic มาจากคำว่า?", opts: ["Information + Graphic", "Info + Gram", "Internet + Graphic", "Informal + Graphic"], a: 0, desc: "ข้อมูล + ภาพกราฟิก", hint: "ข้อมูล + ภาพ" },
+            { id: 509, ch: 5, q: "การนำเสนอแบบ 'โน้มน้าวใจ' เหมาะกับ?", opts: ["การสอน", "การขายสินค้า/หาเสียง", "รายงานผล", "สาธิตวิธีทำ"], a: 1, desc: "ต้องการเปลี่ยนทัศนคติหรือพฤติกรรมผู้รับสาร", hint: "ทำให้คนเชื่อ/ซื้อ" },
+            { id: 510, ch: 5, q: "Hierarchy ใน Infographic ช่วยเรื่องอะไร?", opts: ["ลดขนาดไฟล์", "จัดลำดับสายตาการอ่าน", "เพิ่มสีสัน", "ประหยัดเงิน"], a: 1, desc: "ช่วยนำสายตาให้รู้ว่าควรอ่านอะไรก่อนหลัง", hint: "ลำดับความสำคัญ" },
+            { id: 511, ch: 5, q: "การคิดเชิงวิพากษ์ (Critical Thinking) คือ?", opts: ["คิดคล้อยตาม", "คิดไตร่ตรองหาเหตุผลก่อนเชื่อ", "คิดสิ่งใหม่", "คิดเข้าข้างตนเอง"], a: 1, desc: "ไม่เชื่อทันที แต่ต้องพิจารณาหลักฐาน", hint: "เอ๊ะ! ก่อนเชื่อ" },
+            { id: 512, ch: 5, q: "ข้อใดคือ 'ข้อมูลดิบ' (Data)?", opts: ["กราฟสรุปยอด", "คะแนนสอบที่ยังไม่ตัดเกรด", "เกรดเฉลี่ย", "บทวิเคราะห์"], a: 1, desc: "ตัวเลขที่ยังไม่ได้ประมวลผล", hint: "ยังดูไม่รู้เรื่อง" },
+
+            // --- บทที่ 6 (บางส่วนจากไฟล์) ---
+            { id: 601, ch: 6, q: "Netiquette มาจาก?", opts: ["Net + Etiquette", "Network + Etiquette", "Internet + Etiquette", "New + Etiquette"], a: 1, desc: "Network (เครือข่าย) + Etiquette (มารยาท)", hint: "เครือข่าย + มารยาท" },
+            { id: 602, ch: 6, q: "กฎข้อแรก 'Remember the Human' คือ?", opts: ["อย่าลืมกินข้าว", "ตระหนักว่าคุยกับคนที่มีความรู้สึก", "สมัครสมาชิก", "หุ่นยนต์ทำงาน"], a: 1, desc: "ปลายทางคือมนุษย์ ไม่ใช่คอมพิวเตอร์", hint: "ใจเขาใจเรา" },
+            { id: 603, ch: 6, q: "Cyber Stalking คือ?", opts: ["ขายของ", "เกาะติด/คุกคามชีวิตออนไลน์ผู้อื่น", "เดินตามในห้าง", "สต๊อกของ"], a: 1, desc: "การติดตามรังควานผ่านเน็ตจนเหยื่อกลัว", hint: "โรคจิตตามส่อง" },
+            { id: 604, ch: 6, q: "Phishing คือ?", opts: ["ตกปลา", "สร้างเว็บปลอมหลอกเอาข้อมูล", "ด่าทอ", "ส่งเมลลูกโซ่"], a: 1, desc: "หลอกให้กรอกรหัสผ่าน/เลขบัตร", hint: "ตกเหยื่อ" },
+            { id: 605, ch: 6, q: "Nomophobia คือ?", options: ["กลัวที่แคบ", "กลัวขาดมือถือ", "กลัวแสง", "กลัวสังคม"], a: 1, desc: "No-Mobile-Phone Phobia", hint: "ขาดมือถือไม่ได้" },
+            { id: 606, ch: 6, q: "Digital Empathy คือ?", opts: ["เก่งคอม", "ความเห็นอกเห็นใจในโลกดิจิทัล", "ติดเกม", "ซ่อมเก่ง"], a: 1, desc: "เอาใจเขามาใส่ใจเราในโลกออนไลน์", hint: "เห็นใจผ่านจอ" },
+            { id: 607, ch: 6, q: "Flame wars คือ?", opts: ["แข่งเกม", "สงครามน้ำลาย/ด่าทอรุนแรง", "แฮ็กระบบ", "ระดมทุน"], a: 1, desc: "การโต้ตอบด้วยอารมณ์รุนแรง", hint: "สาดไฟใส่กัน" },
+            { id: 608, ch: 6, q: "วิธีรับมือ Cyberbullying (Stop, Block, Tell) คือ?", opts: ["หยุด, บล็อก, แจ้ง", "ด่ากลับ", "เก็บกด", "ลาออก"], a: 0, desc: "ไม่โต้ตอบ ปิดกั้น และขอความช่วยเหลือ", hint: "คาถาป้องกันตัว" },
+            { id: 609, ch: 6, q: "Clickbait คือ?", opts: ["พาดหัวข่าวเวอร์ให้กด", "ข่าว AI", "ข่าวเสียดสี", "ข่าวจริง"], a: 0, desc: "พาดหัวล่อเป้า เรียกยอดวิว", hint: "กับดักคลิก" },
+            { id: 610, ch: 6, q: "หน่วยงานดูแลศูนย์ต่อต้านข่าวปลอม?", opts: ["กลาโหม", "ศึกษาฯ", "ดิจิทัลฯ (MDES)", "สาธารณสุข"], a: 2, desc: "กระทรวงดิจิทัลเพื่อเศรษฐกิจและสังคม", hint: "กระทรวง DE" },
+            
+            // --- บทที่ 7 (บางส่วนจากไฟล์) ---
+            { id: 701, ch: 7, q: "สาเหตุหลักของ Office Syndrome?", opts: ["กินไม่ตรงเวลา", "นั่งท่าเดิมนาน/สภาพแวดล้อมไม่ดี", "ไม่ออกกำลังกาย", "นอนดึก"], a: 1, desc: "การเกร็งกล้ามเนื้อมัดเดิมซ้ำๆ นานๆ", hint: "นั่งแช่" },
+            { id: 702, ch: 7, q: "การยศาสตร์ (Ergonomics) คือ?", opts: ["รักษาโรค", "ปรับสภาพงานให้เหมาะกับคน", "ออกกำลังกาย", "นวด"], a: 1, desc: "ปรับเก้าอี้ โต๊ะ คอม ให้เข้ากับสรีระ", hint: "งานเข้ากับคน" },
+            { id: 703, ch: 7, q: "กระดูกสันหลังธรรมชาติเป็นรูป?", opts: ["I", "C", "S", "U"], a: 2, desc: "รูปตัว S (S-Curve)", hint: "ตัวเอส" },
+            { id: 704, ch: 7, q: "ขอบบนจอคอมควรอยู่ระดับ?", opts: ["สูงกว่าตา", "ระดับสายตา/ต่ำกว่าเล็กน้อย", "ระดับคาง", "ระดับอก"], a: 1, desc: "เพื่อให้ตามองลงเล็กน้อย คอไม่เกร็ง", hint: "ไม่ต้องแหงน" },
+            { id: 705, ch: 7, q: "กฎ 20-20-20 คือ?", opts: ["พัก 20 นาที", "ทุก 20 นาที มองไกล 20 ฟุต นาน 20 วิ", "กระพริบตา 20 ครั้ง", "ห่าง 20 นิ้ว"], a: 1, desc: "สูตรพักสายตา", hint: "20-20-20" },
+            { id: 706, ch: 7, q: "Text Neck Syndrome เกิดจาก?", opts: ["นอนเล่น", "ก้มหน้าเล่นมือถือนาน", "ถือสูง", "เอียงคอ"], a: 1, desc: "คอรับน้ำหนักหัวมากเกินไปจากการก้ม", hint: "ก้มจนปวดคอ" },
+            { id: 707, ch: 7, q: "Smartphone Face คือ?", opts: ["หน้าใส", "แก้มห้อย/เหนียงออกจากการก้ม", "ตาโต", "หน้าเรียว"], a: 1, desc: "แรงโน้มถ่วงดึงหน้าลง", hint: "หน้าย้อย" },
+            { id: 708, ch: 7, q: "ความสูงโต๊ะทำงานมาตรฐาน?", opts: ["50 cm", "72-75 cm", "90 cm", "1 m"], a: 1, desc: "720-750 มม.", hint: "เจ็ดสิบสอง" },
+            { id: 709, ch: 7, q: "Social Media Detox ช่วยอะไร?", opts: ["ตกข่าว", "มีสมาธิ/ให้เวลากับคนรอบข้าง", "เพื่อนเลิกคบ", "ประหยัดไฟ"], a: 1, desc: "ลดการเสพติดโลกออนไลน์ กลับมาอยู่กับความจริง", hint: "ล้างพิษดิจิทัล" },
+            { id: 710, ch: 7, q: "Phantom Vibration Syndrome คือ?", opts: ["มือสั่น", "หลอนว่ามือถือสั่น", "กลัวผี", "หูแว่ว"], a: 1, desc: "อาการสั่นทิพย์", hint: "คิดไปเองว่าสั่น" },
+
+            // --- บทที่ 8 (บางส่วนจากไฟล์) ---
+            { id: 801, ch: 8, q: "Digital Transformation คือ?", opts: ["เปลี่ยนเว็บ", "ปรับองค์กรขับเคลื่อนด้วยดิจิทัล", "เลิกจ้าง", "ขายออนไลน์ 100%"], a: 1, desc: "นำเทคโนโลยีมาเปลี่ยนกระบวนการทำงาน", hint: "แปลงร่างองค์กร" },
+            { id: 802, ch: 8, q: "Customer Journey ขั้นแรกคือ?", opts: ["ซื้อเลย", "รับรู้แบรนด์ (Awareness)", "บอกต่อ", "สมัครสมาชิก"], a: 1, desc: "ต้องทำให้ลูกค้ารู้จักก่อน", hint: "เห็นแบรนด์" },
+            { id: 803, ch: 8, q: "SEO คือ?", opts: ["ทำเว็บติดอันดับ Google (ฟรี)", "ซื้อโฆษณา", "ทำเว็บสวย", "กันไวรัส"], a: 0, desc: "Search Engine Optimization (Organic)", hint: "ไม่เสียตังค์ค่าคลิก" },
+            { id: 804, ch: 8, q: "https:// และรูปกุญแจ หมายถึง?", opts: ["เว็บปิด", "ปลอดภัย (เข้ารหัส SSL)", "ต้องใส่รหัส", "ห้ามเข้า"], a: 1, desc: "Secure Socket Layer ป้องกันการดักข้อมูล", hint: "ล็อก = ปลอดภัย" },
+            { id: 805, ch: 8, q: "Kaidee (ขายดี) เป็นโมเดลแบบ?", opts: ["B2B", "C2C (Consumer to Consumer)", "G2C", "B2G"], a: 1, desc: "คนทั่วไปขายของให้คนทั่วไป", hint: "ผู้บริโภคขายเอง" },
+            { id: 806, ch: 8, q: "OTP ช่วยอะไร?", opts: ["จ่ายช้า", "ยืนยันตัวตน 2 ชั้น (2FA)", "ลดราคา", "ไม่ช่วย"], a: 1, desc: "ป้องกันคนอื่นเอาบัตรไปใช้", hint: "รหัสครั้งเดียว" },
+            { id: 807, ch: 8, q: "Influencer ช่วยเรื่องอะไร?", opts: ["ลดต้นทุน", "สร้างความมั่นใจ/เห็นภาพจริง", "ส่งเร็ว", "ผลิตของ"], a: 1, desc: "รีวิวช่วยให้ลูกค้าตัดสินใจง่ายขึ้น", hint: "คนดังพาใช้" },
+            { id: 808, ch: 8, q: "หากโดนโกงออนไลน์ควรทำไง?", opts: ["โพสต์ด่า", "แจ้งความ/แจ้ง 1212", "ทำใจ", "ตามล่า"], a: 1, desc: "เก็บหลักฐานแจ้งตำรวจหรือศูนย์ 1212", hint: "แจ้งเจ้าหน้าที่" },
+            { id: 809, ch: 8, q: "Platform ใดเหมาะกับวัยรุ่น/รูปสวย?", opts: ["Facebook", "Instagram", "LinkedIn", "Email"], a: 1, desc: "IG เน้นภาพและวัยรุ่นนิยม", hint: "เน้นรูป" },
+            { id: 810, ch: 8, q: "Digital Footprint คือ?", opts: ["รอยเท้าบนจอ", "ร่องรอยกิจกรรมออนไลน์ของเรา", "รองเท้า", "โปรแกรม"], a: 1, desc: "สิ่งที่ทำทิ้งไว้ในเน็ตและสืบสาวถึงตัวเราได้", hint: "รอยเท้าดิจิทัล" },
+
+            // --- บทที่ 9 (บางส่วนจากไฟล์) ---
+            { id: 901, ch: 9, q: "พ.ร.บ. คอมฯ ฉบับ 2 ประกาศเมื่อ?", opts: ["1 ม.ค. 60", "24 ม.ค. 60", "1 เม.ย. 60", "31 ธ.ค. 60"], a: 1, desc: "ให้ไว้ 23 ม.ค. ประกาศ 24 ม.ค. 2560", hint: "เดือนมกรา" },
+            { id: 902, ch: 9, q: "เข้าถึง 'ระบบ' คอมฯ โดยมิชอบ (ม.5) โทษ?", opts: ["1 เดือน", "คุก 6 เดือน ปรับ 1 หมื่น", "2 ปี", "5 ปี"], a: 1, desc: "แอบเข้าระบบโทษเบา", hint: "6 เดือน / 1 หมื่น" },
+            { id: 903, ch: 9, q: "เข้าถึง 'ข้อมูล' คอมฯ โดยมิชอบ (ม.7) โทษ?", opts: ["6 เดือน", "1 ปี", "คุก 2 ปี ปรับ 4 หมื่น", "10 ปี"], a: 2, desc: "แอบดูไฟล์โทษหนักกว่าเข้าระบบ", hint: "2 ปี / 4 หมื่น" },
+            { id: 904, ch: 9, q: "ส่ง Spam Mail ไม่มีปุ่ม Unsubscribe โทษ?", opts: ["คุก 1 ปี", "ปรับไม่เกิน 2 แสน", "ปรับ 1 แสน", "คุก 5 ปี"], a: 1, desc: "ก่อความเดือดร้อนรำคาญ ปรับอย่างเดียว", hint: "สแปม ปรับ 2 แสน" },
+            { id: 905, ch: 9, q: "โพสต์ Fake News เสียหายต่อประชาชน (ม.14) โทษ?", opts: ["คุก 5 ปี ปรับ 1 แสน", "10 ปี", "ปรับ 500", "1 ปี"], a: 0, desc: "นำเข้าข้อมูลเท็จ", hint: "5 ปี / 1 แสน" },
+            { id: 906, ch: 9, q: "ตัดต่อภาพคนอื่นให้เสียหาย (ม.16) โทษ?", opts: ["1 ปี", "2 ปี", "คุก 3 ปี ปรับ 2 แสน", "5 ปี"], a: 2, desc: "ทำให้ผู้อื่นอับอาย", hint: "3 ปี / 2 แสน" },
+            { id: 907, ch: 9, q: "เก็บ Log File ไว้นานเท่าไหร่?", opts: ["30 วัน", "60 วัน", "ไม่น้อยกว่า 90 วัน", "1 ปี"], a: 2, desc: "กฎหมายบังคับ 90 วัน", hint: "3 เดือน" },
+            { id: 908, ch: 9, q: "ลิขสิทธิ์คุ้มครองนานแค่ไหน?", opts: ["10 ปี", "20 ปี", "ตลอดชีวิตผู้สร้าง + 50 ปี", "ตลอดกาล"], a: 2, desc: "ตายแล้วยังคุ้มครองต่อ", hint: "ชีวิต + 50" },
+            { id: 909, ch: 9, q: "ขายของปลอม (ละเมิดลิขสิทธิ์เพื่อการค้า) โทษสูงสุด?", opts: ["ปรับพันนึง", "คุก 3 เดือน", "คุก 4 ปี หรือปรับ 8 แสน", "ประหาร"], a: 2, desc: "โทษหนักกว่าทำใช้เอง", hint: "4 ปี" },
+            { id: 910, ch: 9, q: "ศูนย์ต่อต้านข่าวปลอมสังกัด?", opts: ["มหาดไทย", "ศึกษาฯ", "กระทรวงดิจิทัล (MDES)", "กลาโหม"], a: 2, desc: "กระทรวง DE", hint: "ดิจิทัล" },
+            { id: 911, ch: 9, q: "แฮกเกอร์เจาะระบบจนคนตาย โทษ?", opts: ["5-20 ปี", "ตลอดชีวิต", "ประหาร", "ไม่มีโทษ"], a: 0, desc: "มาตรา 12 วรรคท้าย", hint: "20 ปี" },
+            { id: 912, ch: 9, q: "กด Like โพสต์ผิดกฎหมาย ผิดไหม?", opts: ["ไม่ผิด", "อาจผิดถ้าศาลมองว่าสนับสนุน", "ผิดเสมอ", "ผิดลิขสิทธิ์"], a: 1, desc: "มีความเสี่ยง", hint: "50/50" }
+            // หมายเหตุ: เนื่องจากข้อจำกัดความยาว โค้ดนี้จึงใส่ตัวอย่างประมาณ 50+ ข้อ 
+            // ในการใช้งานจริง คุณสามารถ Copy รูปแบบ JSON ด้านบนเพื่อเติมข้อสอบให้ครบ 300 ข้อได้เลยครับ
+        ];
+
+        // ==========================================
+        // 2. ระบบ SRS (Spaced Repetition System)
+        // ==========================================
+        const useSRS = () => {
+            const load = () => JSON.parse(localStorage.getItem('gen1402_srs') || '{}');
+            const save = (data) => localStorage.setItem('gen1402_srs', JSON.stringify(data));
+            
+            const update = (qId, isCorrect, timeSpent) => {
+                const db = load();
+                let item = db[qId] || { ease: 2.5, interval: 0, reviews: 0 };
+                
+                if (!isCorrect || timeSpent > 30000) { // ผิด หรือ คิดนานเกิน 30 วิ
+                    item.interval = 0; // เริ่มใหม่
+                    item.ease = Math.max(1.3, item.ease - 0.2);
+                } else {
+                    item.interval = item.reviews === 0 ? 1 : Math.ceil(item.interval * item.ease);
+                    item.ease += 0.1;
+                }
+                item.dueDate = Date.now() + (item.interval * 60000); // นาที (Demo) หรือ วัน
+                item.reviews++;
+                db[qId] = item;
+                save(db);
+            };
+
+            const getDue = () => {
+                const db = load();
+                const now = Date.now();
+                return Object.keys(db).filter(id => db[id].dueDate <= now).map(Number);
+            };
+
+            return { update, getDue };
+        };
+
+        // ==========================================
+        // 3. UI COMPONENTS
+        // ==========================================
+
+        const Menu = ({ onSelectMode }) => {
+            const srs = useSRS();
+            const dueCount = srs.getDue().length;
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-indigo-900 to-purple-800 text-white">
+                    <div className="max-w-4xl w-full bg-white/10 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/20 anim-fade">
+                        <h1 className="text-4xl font-bold text-center mb-2">🎓 GEN1402 Exam Simulator</h1>
+                        <p className="text-center text-indigo-200 mb-10">ระบบฝึกฝนและสอบเสมือนจริง (Ultimate Edition)</p>
+
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {/* Card 1: Practice */}
+                            <div className="bg-white text-gray-800 rounded-2xl p-6 shadow hover:shadow-xl transition transform hover:-translate-y-1">
+                                <div className="text-4xl mb-4">📚</div>
+                                <h3 className="text-xl font-bold mb-2">โหมดฝึกฝน</h3>
+                                <p className="text-sm text-gray-500 mb-4">ทำข้อสอบพร้อมเฉลยและคำใบ้</p>
+                                <div className="space-y-2">
+                                    <button onClick={() => onSelectMode('practice_all')} className="w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg font-bold hover:bg-indigo-200">ตะลุยโจทย์ทั้งหมด</button>
+                                    <div className="grid grid-cols-5 gap-1">
+                                        {[5,6,7,8,9].map(c => (
+                                            <button key={c} onClick={() => onSelectMode('practice_chapter', c)} className="py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs font-bold">บท {c}</button>
+                                        ))}
+                                    </div>
+                                    {dueCount > 0 && (
+                                        <button onClick={() => onSelectMode('review_srs')} className="w-full py-2 bg-orange-100 text-orange-700 rounded-lg font-bold hover:bg-orange-200 animate-pulse">
+                                            ทบทวน {dueCount} ข้อที่ลืม
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Card 2: Exam */}
+                            <div className="bg-white text-gray-800 rounded-2xl p-6 shadow hover:shadow-xl transition transform hover:-translate-y-1 border-2 border-transparent hover:border-red-500">
+                                <div className="text-4xl mb-4">⏰</div>
+                                <h3 className="text-xl font-bold mb-2">สอบเสมือนจริง</h3>
+                                <p className="text-sm text-gray-500 mb-4">110 ข้อ (ตามสัดส่วนจริง) / 90 นาที</p>
+                                <button onClick={() => onSelectMode('exam_normal')} className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 shadow-lg">
+                                    เริ่มสอบ (Normal)
+                                </button>
+                            </div>
+
+                            {/* Card 3: Serious Exam */}
+                            <div className="bg-gray-900 text-white rounded-2xl p-6 shadow hover:shadow-xl transition transform hover:-translate-y-1 border border-gray-700">
+                                <div className="text-4xl mb-4">🛡️</div>
+                                <h3 className="text-xl font-bold mb-2">สอบจริงจัง</h3>
+                                <p className="text-sm text-gray-400 mb-4">มีระบบกันโกง (Anti-Cheat) ตรวจจับการพับจอ</p>
+                                <button onClick={() => onSelectMode('exam_serious')} className="w-full py-3 bg-yellow-500 text-black rounded-xl font-bold hover:bg-yellow-400 shadow-lg">
+                                    เริ่มสอบ (Proctored)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Exam = ({ mode, questions, onFinish, onQuit }) => {
+            const [currentIdx, setCurrentIdx] = useState(0);
+            const [answers, setAnswers] = useState({});
+            const [timeLeft, setTimeLeft] = useState(mode.includes('exam') ? 90 * 60 : null);
+            const [showHint, setShowHint] = useState(false);
+            
+            // Security Vars
+            const warningCount = useRef(0);
+            const lastActive = useRef(Date.now());
+
+            const isPractice = mode.includes('practice') || mode === 'review_srs';
+            const isSerious = mode === 'exam_serious';
+
+            // Timer Logic
+            useEffect(() => {
+                if (!timeLeft) return;
+                const timer = setInterval(() => {
+                    setTimeLeft(prev => {
+                        if (prev <= 1) { clearInterval(timer); finish(); return 0; }
+                        return prev - 1;
+                    });
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Anti-Cheat Logic
+            useEffect(() => {
+                if (!isSerious) return;
+
+                const warn = (msg) => {
+                    warningCount.current++;
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'ตรวจพบพฤติกรรมต้องสงสัย',
+                        text: `${msg} (เตือนครั้งที่ ${warningCount.current}/3)`,
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    if (warningCount.current >= 3) finish(true);
+                };
+
+                const handleBlur = () => warn("ห้ามสลับหน้าจอหรือคลิกนอกหน้าต่าง!");
+                const handleVisibility = () => { if (document.hidden) warn("ห้ามพับหน้าจอ!"); };
+                
+                const checkAFK = setInterval(() => {
+                    if (Date.now() - lastActive.current > 60000) warn("ไม่มีการเคลื่อนไหวนานเกินไป!");
+                }, 10000);
+
+                const resetAFK = () => lastActive.current = Date.now();
+
+                window.addEventListener('blur', handleBlur);
+                document.addEventListener('visibilitychange', handleVisibility);
+                window.addEventListener('mousemove', resetAFK);
+                window.addEventListener('keydown', resetAFK);
+
+                return () => {
+                    window.removeEventListener('blur', handleBlur);
+                    document.removeEventListener('visibilitychange', handleVisibility);
+                    window.removeEventListener('mousemove', resetAFK);
+                    window.removeEventListener('keydown', resetAFK);
+                    clearInterval(checkAFK);
+                };
+            }, [isSerious]);
+
+            const handleAnswer = (optIdx) => {
+                const timeSpent = Date.now() - lastActive.current; // Rough time tracking
+                setAnswers(prev => ({ ...prev, [currentIdx]: { ans: optIdx, time: timeSpent } }));
+            };
+
+            const finish = (force = false) => {
+                if (force) {
+                    onFinish(answers, true);
+                } else {
+                    Swal.fire({
+                        title: 'ยืนยันส่งคำตอบ?',
+                        text: `ทำไปแล้ว ${Object.keys(answers).length} / ${questions.length} ข้อ`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'ส่งข้อสอบ',
+                        cancelButtonText: 'ทำต่อ'
+                    }).then((result) => {
+                        if (result.isConfirmed) onFinish(answers, false);
+                    });
+                }
+            };
+
+            const q = questions[currentIdx];
+            const answered = answers[currentIdx];
+            const isCorrect = answered?.ans === q.a;
+
+            return (
+                <div className="min-h-screen bg-gray-50 flex flex-col">
+                    {/* Header */}
+                    <div className="bg-white shadow-md sticky top-0 z-50">
+                        <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+                            <button onClick={onQuit} className="text-gray-500 hover:text-red-600 font-bold">ออก</button>
+                            <div className="font-bold text-lg">
+                                {isSerious ? <span className="text-red-600">🛡️ สอบจริงจัง</span> : isPractice ? 'โหมดฝึกฝน' : 'สอบเก็บคะแนน'}
+                            </div>
+                            {timeLeft !== null && (
+                                <div className={`font-mono text-xl font-bold ${timeLeft < 300 ? 'text-red-500 animate-pulse' : 'text-indigo-600'}`}>
+                                    {Math.floor(timeLeft/60)}:{(timeLeft%60).toString().padStart(2,'0')}
+                                </div>
+                            )}
+                        </div>
+                        <div className="h-1 bg-gray-200 w-full">
+                            <div className="h-full bg-green-500 transition-all duration-300" style={{ width: `${((currentIdx+1)/questions.length)*100}%` }}></div>
+                        </div>
+                    </div>
+
+                    {/* Question Area */}
+                    <div className="flex-1 max-w-3xl w-full mx-auto p-4 md:p-8">
+                        <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 md:p-10 anim-fade">
+                            <div className="flex justify-between items-start mb-6">
+                                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-lg text-sm font-bold">ข้อที่ {currentIdx + 1} / {questions.length}</span>
+                                <span className="text-sm text-gray-400">บทที่ {q.ch}</span>
+                            </div>
+
+                            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-8 leading-relaxed">{q.q}</h2>
+
+                            <div className="space-y-3">
+                                {q.opts.map((opt, i) => {
+                                    let btnClass = "w-full text-left p-4 rounded-xl border-2 transition-all font-medium ";
+                                    if (isPractice && answered) {
+                                        if (i === q.a) btnClass += "bg-green-100 border-green-500 text-green-900";
+                                        else if (i === answered.ans) btnClass += "bg-red-100 border-red-500 text-red-900";
+                                        else btnClass += "border-gray-100 text-gray-400";
+                                    } else if (answered?.ans === i) {
+                                        btnClass += "bg-indigo-100 border-indigo-500 text-indigo-900";
+                                    } else {
+                                        btnClass += "border-gray-100 hover:border-indigo-200 hover:bg-gray-50";
+                                    }
+
+                                    return (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => !answered && handleAnswer(i)} // Lock answer if practice
+                                            disabled={isPractice && answered}
+                                            className={btnClass}
+                                        >
+                                            {['ก', 'ข', 'ค', 'ง'][i]}. {opt}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Hint & Explanation (Practice Only) */}
+                            {isPractice && (
+                                <div className="mt-6 space-y-4">
+                                    {!answered && (
+                                        <button 
+                                            onClick={() => setShowHint(!showHint)}
+                                            className="text-orange-500 text-sm font-bold hover:underline"
+                                        >
+                                            {showHint ? 'ซ่อนคำใบ้' : '💡 ดูคำใบ้'}
+                                        </button>
+                                    )}
+                                    {showHint && !answered && (
+                                        <div className="bg-orange-50 p-3 rounded-lg text-orange-800 text-sm border-l-4 border-orange-400 anim-fade">
+                                            {q.hint}
+                                        </div>
+                                    )}
+                                    {answered && (
+                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 anim-fade">
+                                            <h4 className="font-bold text-blue-900 mb-1">เฉลยละเอียด:</h4>
+                                            <p className="text-blue-800 text-sm">{q.desc}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Navigation */}
+                        <div className="flex justify-between mt-6">
+                            <button 
+                                onClick={() => { setCurrentIdx(Math.max(0, currentIdx - 1)); setShowHint(false); }}
+                                disabled={currentIdx === 0}
+                                className="px-6 py-2 bg-white rounded-lg shadow disabled:opacity-50 font-bold text-gray-600"
+                            >
+                                ข้อก่อนหน้า
+                            </button>
+                            {currentIdx === questions.length - 1 ? (
+                                <button onClick={() => finish()} className="px-6 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 font-bold">ส่งคำตอบ</button>
+                            ) : (
+                                <button 
+                                    onClick={() => { setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1)); setShowHint(false); }}
+                                    className="px-6 py-2 bg-white rounded-lg shadow hover:bg-gray-50 font-bold text-indigo-600"
+                                >
+                                    ข้อถัดไป
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Result = ({ questions, answers, onHome, isCheated }) => {
+            const score = questions.reduce((acc, q, i) => acc + (answers[i]?.ans === q.a ? 1 : 0), 0);
+            const srs = useSRS();
+
+            useEffect(() => {
+                // Update SRS Data
+                questions.forEach((q, i) => {
+                    const ansData = answers[i];
+                    if (ansData) {
+                        const isCorrect = ansData.ans === q.a;
+                        srs.update(q.id, isCorrect, ansData.time || 5000);
+                    }
+                });
+            }, []);
+
+            return (
+                <div className="min-h-screen bg-indigo-50 p-6 flex justify-center">
+                    <div className="bg-white w-full max-w-4xl rounded-3xl shadow-xl overflow-hidden flex flex-col">
+                        <div className={`p-8 text-center text-white ${isCheated ? 'bg-red-600' : 'bg-indigo-600'}`}>
+                            <h2 className="text-3xl font-bold mb-2">{isCheated ? 'ถูกปรับตก (ทุจริต)' : 'ผลการทดสอบ'}</h2>
+                            <div className="text-6xl font-bold my-4">{Math.round(score/questions.length*100)}%</div>
+                            <p>ทำได้ {score} จาก {questions.length} ข้อ</p>
+                        </div>
+                        <div className="p-6 text-center border-b">
+                            <button onClick={onHome} className="px-8 py-3 bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition">กลับหน้าหลัก</button>
+                        </div>
+                        <div className="p-6 bg-gray-50 flex-1 overflow-y-auto">
+                            <h3 className="font-bold text-gray-700 mb-4">เฉลยละเอียด</h3>
+                            <div className="space-y-4">
+                                {questions.map((q, i) => {
+                                    const myAns = answers[i]?.ans;
+                                    const isCorrect = myAns === q.a;
+                                    return (
+                                        <div key={i} className={`p-4 rounded-xl border-l-4 bg-white shadow-sm ${isCorrect ? 'border-green-500' : 'border-red-500'}`}>
+                                            <div className="font-bold text-gray-800 mb-2">{i+1}. {q.q}</div>
+                                            <div className="text-sm space-y-1 mb-3">
+                                                <p className={isCorrect ? "text-green-600" : "text-red-600"}>
+                                                    คุณตอบ: {myAns !== undefined ? q.opts[myAns] : 'ไม่ได้ตอบ'}
+                                                </p>
+                                                {!isCorrect && <p className="text-green-600 font-bold">เฉลย: {q.opts[q.a]}</p>}
+                                            </div>
+                                            <div className="bg-gray-100 p-3 rounded text-sm text-gray-600">{q.desc}</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [page, setPage] = useState('menu');
+            const [mode, setMode] = useState('');
+            const [activeQ, setActiveQ] = useState([]);
+            const [result, setResult] = useState(null);
+
+            const start = (selectedMode, param) => {
+                setMode(selectedMode);
+                let qSet = [];
+
+                if (selectedMode === 'practice_all') {
+                    qSet = [...QUESTION_POOL];
+                } else if (selectedMode === 'practice_chapter') {
+                    qSet = QUESTION_POOL.filter(q => q.ch === param);
+                } else if (selectedMode === 'review_srs') {
+                    const srs = JSON.parse(localStorage.getItem('gen1402_srs') || '{}');
+                    const dueIds = Object.keys(srs).filter(id => srs[id].dueDate <= Date.now()).map(Number);
+                    qSet = QUESTION_POOL.filter(q => dueIds.includes(q.id));
+                } else if (selectedMode.includes('exam')) {
+                    // Blueprint Logic
+                    Object.keys(EXAM_BLUEPRINT).forEach(ch => {
+                        const count = EXAM_BLUEPRINT[ch];
+                        const pool = QUESTION_POOL.filter(q => q.ch == ch);
+                        const picked = pool.sort(() => 0.5 - Math.random()).slice(0, count);
+                        qSet = [...qSet, ...picked];
+                    });
+                    // Fill if not enough (in case of empty chapters in demo)
+                    if (qSet.length < 110) {
+                         const remaining = 110 - qSet.length;
+                         const others = QUESTION_POOL.filter(q => !qSet.includes(q)).sort(() => 0.5 - Math.random()).slice(0, remaining);
+                         qSet = [...qSet, ...others];
+                    }
+                }
+
+                if (qSet.length === 0) {
+                    Swal.fire('ไม่พบข้อสอบ', 'ไม่มีข้อสอบในหมวดนี้ หรือยังไม่ถึงกำหนดทบทวน', 'info');
+                    return;
+                }
+
+                setActiveQ(qSet);
+                setPage('exam');
+            };
+
+            const finish = (answers, isCheated) => {
+                setResult({ answers, isCheated });
+                setPage('result');
+            };
+
+            return (
+                <React.Fragment>
+                    {page === 'menu' && <Menu onSelectMode={start} />}
+                    {page === 'exam' && <Exam mode={mode} questions={activeQ} onFinish={finish} onQuit={() => setPage('menu')} />}
+                    {page === 'result' && <Result questions={activeQ} answers={result.answers} isCheated={result.isCheated} onHome={() => setPage('menu')} />}
+                </React.Fragment>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
